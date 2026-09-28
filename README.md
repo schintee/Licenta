@@ -1,237 +1,131 @@
-# Schintee_Andreea_Aplicatie_Practica_AIA_Licenta
+# StockIQ – Smart Inventory Management System
 
-## Proiect
+An IoT inventory system that measures stock automatically with weight sensors, syncs it in real time through the cloud, and shows it in a mobile app with built-in consumption analytics and an AI assistant.
 
-**StockIQ - Sistem inteligent de inventariere**
+Bachelor's thesis project, Politehnica University of Timișoara (Automation and Applied Informatics, 2025–2026).
 
-## Repository cod sursă
+<img width="1536" height="662" alt="Picture1" src="https://github.com/user-attachments/assets/a7aea8eb-fbce-4531-b57a-0067c4058610" />
+<img width="220" height="393" alt="Picture3" src="https://github.com/user-attachments/assets/4dacbd58-fde4-4a31-9e39-ed627d2e2090" />
+<img width="194" height="393" alt="Picture4" src="https://github.com/user-attachments/assets/d7e86574-cec8-4231-b8bf-3585115f9617" />
 
-Codul sursă complet al proiectului este disponibil la adresa:
 
-```text
-https://gitlab.upt.ro/andreea.schintee/schintee_andreea_aplicatie_practica_aia_licenta
+
+## Problem
+
+Small businesses, especially with a low number of products, often have a mismatch between the stock shown in their system and the real stock. Manual inventory takes time and is error-prone, which leads to delayed orders and lost sales. StockIQ removes the manual counting step: each box measures its own contents and reports them automatically.
+
+## Architecture
+
+```
+┌──────────────────────┐   HTTPS (PATCH)   ┌──────────────────────────┐   live sync   ┌───────────────────┐
+│  Smart box           │ ────────────────► │ Firebase Realtime        │ ◄───────────► │ Flutter mobile app │
+│  ESP32 + HX711       │                   │ Database                 │               │ (StockIQ)          │
+│  + load cell + LED   │ ◄──────────────── │                          │               │ + AI Insights      │
+└──────────────────────┘   HTTPS (GET)     └──────────────────────────┘               │ + AI Assistant ────┼──► Gemini API
+        commands (tare, calibration)                                                  └───────────────────┘
 ```
 
-Repository-ul conține codul sursă pentru aplicația mobilă Flutter și codul pentru ESP32.
+- **Hardware layer:** ESP32 reads a load cell through an HX711 24-bit ADC and drives WS2812B RGB LEDs (green / yellow / red) to signal the stock level locally.
+- **Cloud layer:** Firebase Realtime Database is the single channel between device and app. There is no direct phone-to-hardware connection: the ESP32 pushes measurements and polls for commands.
+- **Application layer:** Flutter app for monitoring, orders, QR scanning, box setup/calibration and statistics.
 
----
+## How the stock is measured
 
-# Pașii de compilare ai aplicației
+1. The load cell measures the weight of the products in the box.
+2. The HX711 amplifies and digitizes the signal.
+3. The ESP32 computes the quantity from the raw reading:
 
-## 1. Compilarea aplicației mobile Flutter
-
-### Cerințe necesare
-
-Pentru compilarea aplicației mobile sunt necesare:
-
-- Flutter SDK instalat;
-- Android Studio sau Visual Studio Code;
-- Android SDK;
-- emulator Android sau telefon Android conectat prin USB;
-- conexiune la internet pentru instalarea dependențelor;
-
-### Comenzi de compilare
-
-Se deschide un terminal în directorul repository-ului și se intră în folderul aplicației mobile:
-
-```bash
-cd mobile-app
+```
+Q = round( (RAW_current − RAW_empty) / rawPerGram / productWeight )
 ```
 
-Se instalează dependențele proiectului:
+Negative values are clamped to zero. Several readings are averaged to reduce noise.
 
-```bash
-flutter pub get
+4. The value is sent to Firebase and displayed in the app. Each box is identified by a QR code.
+
+## Data model (Firebase Realtime Database)
+
+| Node | Content |
+|---|---|
+| `boxes` | state, weight, thresholds, calibration data |
+| `products` | product information and thresholds |
+| `orders` | purchase orders |
+| `commands` | hardware commands (tare, calibration) |
+| `stockHistory` | stock evolution over time |
+
+## Mobile app features
+
+- Authentication and main menu
+- Real-time stock monitoring
+- Purchase order creation and tracking
+- QR code scanning to identify boxes and products
+- Box initialization and calibration
+- Statistics and charts
+
+### AI Insights (local, rule-based)
+
+Runs entirely inside the Flutter app, with no LLM and no cloud functions:
+
+- **Product status:** OK / Low / Critical, compared against configured thresholds
+- **Average consumption:** computed from the last 14 days of stock history
+- **Days until depletion:** estimated from average daily consumption
+- **AI Risk Score (0–100):** combines status, urgency and consumption history
+
+### AI Assistant (Gemini API)
+
+A conversational assistant for the warehouse, in Romanian:
+
+1. The user asks a question (e.g. "What should I order today?")
+2. The app builds a context from `boxes`, `products`, `orders` and `stockHistory`
+3. Context and question are sent to `gemini-2.5-flash-lite`
+4. The answer is displayed. The assistant is advisory only and never changes data automatically.
+
+## Repository structure
+
+```
+StockIQ/
+├── firmware/       # ESP32 code (HX711 reading and calibration, Wi-Fi, Firebase, LEDs)
+├── mobile-app/     # Flutter application
+├── docs/           # architecture diagram, photos, screenshots
+└── README.md
 ```
 
-Se verifică dacă mediul Flutter este configurat corect:
+## Setup
 
-```bash
-flutter doctor
-```
+> Fill in the exact commands for your project.
 
-Se compilează/rulează aplicația în modul debug:
+**Firmware**
+1. Copy `firmware/config.example.h` to `firmware/config.h` and set your Wi-Fi credentials and Firebase database URL.
+2. Build and flash to the ESP32 (Arduino IDE / PlatformIO).
+3. Run the calibration procedure (tare with the empty box, then a known weight).
 
-```bash
-flutter run
-```
+**Mobile app**
+1. Create a Firebase project with a Realtime Database and add your configuration to the app (see `mobile-app/README` or `config.example`).
+2. Set your Gemini API key in the local config file (never commit it).
+3. `flutter pub get` then `flutter run`.
 
-Pentru generarea unui fișier APK se folosește comanda:
+## Limitations
 
-```bash
-flutter build apk
-```
+- Low accuracy for products with too little consumption history
+- Sensitive to how the weight is positioned in the box
+- The AI Assistant requires an internet connection
+- Prototype tested on a small number of boxes
+- No automated physical handling mechanisms
 
-Fișierul APK generat se va afla în directorul:
+## Future work
 
-```text
-mobile-app/build/app/outputs/flutter-apk/
-```
+- Multi-warehouse support with centralized management
+- Lot traceability and expiry dates with alerts
+- Roles, access control and an activity log
+- Additional sensors (temperature, humidity, motion)
+- E-commerce platform integration for automatic stock sync
+- Management dashboard with KPIs
+- Moving the analytics and API-key handling to a backend service (for example on Azure) instead of the client
 
+## Tech stack
 
-## 2. Compilarea codului pentru ESP32
+ESP32 · HX711 · load cells · WS2812B · Firebase Realtime Database · Flutter · Gemini API · QR codes
 
-### Cerințe necesare
+## Author
 
-Pentru compilarea codului ESP32 sunt necesare:
-
-- Arduino IDE sau PlatformIO;
-- suportul pentru plăcile ESP32 instalat;
-- placa ESP32 conectată prin USB;
-- bibliotecile necesare pentru Wi-Fi, Firebase, HX711 și WS2812B/NeoPixel.
-
-### Pași de compilare în Arduino IDE
-
-1. Se deschide Arduino IDE.
-2. Se deschide fișierul principal `.ino` din folderul:
-
-```text
-esp32/
-```
-
-3. Se selectează placa ESP32 din meniul:
-
-```text
-Tools → Board
-```
-
-4. Se selectează portul corespunzător din meniul:
-
-```text
-Tools → Port
-```
-
-5. Se instalează bibliotecile necesare din Library Manager.
-6. Se completează local datele de conectare Wi-Fi și Firebase.
-7. Se apasă butonul:
-
-```text
-Verify / Compile
-```
-
-8. Dacă nu apar erori, codul este compilat cu succes.
-
-### Pași de upload pe ESP32
-
-După compilare, programul se încarcă pe placă apăsând:
-
-```text
-Upload
-```
-
-După finalizarea încărcării, se deschide:
-
-```text
-Serial Monitor
-```
-
-pentru verificarea conectării la Wi-Fi și Firebase.
-
----
-
-# Pașii de instalare ai aplicației
-
-## 1. Instalarea aplicației mobile
-
-Există două variante de instalare.
-
-### Varianta 1: Instalare prin Flutter, pentru testare
-
-1. Se clonează repository-ul:
-
-```bash
-git clone https://gitlab.upt.ro/andreea.schintee/schintee_andreea_aplicatie_practica_aia_licenta
-```
-
-2. Se intră în folderul aplicației:
-
-```bash
-cd schintee_andreea_aplicatie_practica_aia_licenta/mobile-app
-```
-
-3. Se instalează dependențele:
-
-```bash
-flutter pub get
-```
-
-4. Se conectează un telefon Android prin USB sau se pornește un emulator.
-
-5. Se instalează și rulează aplicația cu:
-
-```bash
-flutter run
-```
-
-### Varianta 2: Instalare prin APK
-
-1. Se generează APK-ul:
-
-```bash
-cd mobile-app
-flutter build apk
-```
-
-2. Fișierul APK rezultat se copiază pe telefonul Android.
-
-3. Pe telefon se permite instalarea aplicațiilor din surse externe, dacă este necesar.
-
-4. Se deschide fișierul APK și se instalează aplicația.
-
----
-
-## 2. Instalarea/configurarea componentei ESP32
-
-1. Se instalează Arduino IDE sau PlatformIO.
-2. Se instalează suportul pentru plăci ESP32.
-3. Se instalează bibliotecile necesare proiectului.
-4. Se conectează placa ESP32 la calculator prin USB.
-5. Se configurează local datele Wi-Fi și Firebase.
-6. Se compilează și se încarcă programul pe ESP32.
-7. Se verifică funcționarea în Serial Monitor.
-
----
-
-# Pașii de lansare ai aplicației
-
-## 1. Lansarea aplicației mobile
-
-Pentru lansarea aplicației în modul de dezvoltare:
-
-```bash
-cd mobile-app
-flutter run
-```
-
-Aplicația se va deschide pe emulatorul Android sau pe telefonul conectat prin USB.
-
-Dacă aplicația a fost instalată prin APK, aceasta se lansează direct de pe telefon, apăsând pictograma aplicației StockIQ.
-
----
-
-## 2. Lansarea componentei ESP32
-
-1. Se conectează ESP32 la alimentare sau la calculator prin USB.
-2. Programul încărcat anterior pornește automat.
-3. ESP32 se conectează la rețeaua Wi-Fi configurată.
-4. ESP32 citește valorile de la senzorii de greutate prin modulele HX711.
-5. Datele sunt transmise către Firebase Realtime Database.
-6. LED-urile WS2812B indică vizual nivelul stocului.
-7. Funcționarea poate fi verificată în Serial Monitor.
-
----
-
-## 3. Lansarea completă a sistemului StockIQ
-
-Pentru utilizarea completă a sistemului se urmează pașii:
-
-1. Se pornește/conectează ESP32.
-2. Se verifică în Serial Monitor conectarea la Wi-Fi.
-3. Se verifică în Firebase Realtime Database că datele sunt actualizate.
-4. Se lansează aplicația mobilă StockIQ.
-5. Se verifică afișarea produselor și a cantităților în aplicație.
-6. Se testează scanarea codurilor QR.
-7. Se testează modificarea stocurilor prin adăugarea sau eliminarea produselor din cutii.
-8. Se verifică semnalizarea LED-urilor pentru nivelul de stoc.
-9. Se testează funcționalitățile de comenzi, statistici și AI Assistant.
-
+Andreea-Denisa Schintee
