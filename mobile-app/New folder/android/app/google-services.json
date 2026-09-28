@@ -1,0 +1,30 @@
+{
+  "project_info": {
+    "project_number": "242538231761",
+    "firebase_url": "https://smart-inventory-71548-default-rtdb.europe-west1.firebasedatabase.app",
+    "project_id": "smart-inventory-71548",
+    "storage_bucket": "smart-inventory-71548.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:242538231761:android:79b28cb1fcf1e2a59912f0",
+        "android_client_info": {
+          "package_name": "com.example.warehouse"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyD7ADQMkwtL-iGahzyYVTfDJQ_83lJK5h0"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

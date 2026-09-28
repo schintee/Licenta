@@ -1,0 +1,38 @@
+{
+  "flutter": {
+    "platforms": {
+      "android": {
+        "default": {
+          "projectId": "smart-inventory-71548",
+          "appId": "1:242538231761:android:79b28cb1fcf1e2a59912f0",
+          "fileOutput": "android/app/google-services.json"
+        }
+      },
+      "dart": {
+        "lib/firebase_options.dart": {
+          "projectId": "smart-inventory-71548",
+          "configurations": {
+            "android": "1:242538231761:android:79b28cb1fcf1e2a59912f0",
+            "ios": "1:242538231761:ios:4cb907a7c3f48f6b9912f0",
+            "macos": "1:242538231761:ios:4cb907a7c3f48f6b9912f0",
+            "web": "1:242538231761:web:03cd97d7f23b5c5c9912f0"
+          }
+        }
+      }
+    }
+  },
+  "functions": [
+    {
+      "source": "functions",
+      "codebase": "default",
+      "disallowLegacyRuntimeConfig": true,
+      "ignore": [
+        "node_modules",
+        ".git",
+        "firebase-debug.log",
+        "firebase-debug.*.log",
+        "*.local"
+      ]
+    }
+  ]
+}
